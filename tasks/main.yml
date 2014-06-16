@@ -56,24 +56,24 @@
 #    group: owncloud
 #    recurse: yes
 
-#- name: update /etc/nginx/sites-available/pwm from template
-#  template:
-#    src: etc/nginx/sites-available/pwm
-#    dest: /etc/nginx/sites-available/pwm
-#    owner: root
-#    group: root
-#    mode: 0644
-#  notify:
-#    - restart nginx
+- name: update /etc/nginx/sites-available/pwm from template
+  template:
+    src: etc/nginx/sites-available/pwm
+    dest: /etc/nginx/sites-available/pwm
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart nginx
 
-#- name: ensure /etc/nginx/sites-enabled/pwm exists and links to ../sites-available/pwm
-#  file:
-#    path: /etc/nginx/sites-enabled/pwm
-#    src: ../sites-available/pwm
-#    force: yes
-#    state: link
-#  notify:
-#    - restart nginx
+- name: ensure /etc/nginx/sites-enabled/pwm exists and links to ../sites-available/pwm
+  file:
+    path: /etc/nginx/sites-enabled/pwm
+    src: ../sites-available/pwm
+    force: yes
+    state: link
+  notify:
+    - restart nginx
 
 - name: ensure that there is not a hostname collision with the nginx default host
   lineinfile:
