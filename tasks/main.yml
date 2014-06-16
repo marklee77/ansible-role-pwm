@@ -6,57 +6,52 @@
     update_cache: yes 
     cache_valid_time: 600
   with_items:
+    - ant
     - nginx
-    - php5-curl
-    - php5-fpm
-    - php5-gd
-    - php5-imagick
-    - php5-intl
-    - php5-json
-    - php5-mcrypt
-    - php5-mysql
+    - openjdk-7-jdk
     - ssl-cert
+    - subversion
 
 # FIXME: if ssl-cert turns out problematic this can probably be done in a
 # self-contained shell script...
-- name: ensure that ssl-cert is configured properly to generate self-signed certificate if required
-  debconf:
-    name: ssl-cert
-    question: make-ssl-cert/hostname 
-    vtype: string
-    value: "{{ owncloud_hostname }}"
+#- name: ensure that ssl-cert is configured properly to generate self-signed certificate if required
+#  debconf:
+#    name: ssl-cert
+#    question: make-ssl-cert/hostname 
+#    vtype: string
+#    value: "{{ owncloud_hostname }}"
 
-- name: create self-signed key/certificate pair if required
-  shell: DEBIAN_FRONTEND=noninteractive make-ssl-cert /usr/share/ssl-cert/ssleay.cnf {{ owncloud_ssl_cert_file }}
-         creates={{ owncloud_ssl_cert_file }}
+#- name: create self-signed key/certificate pair if required
+#  shell: DEBIAN_FRONTEND=noninteractive make-ssl-cert /usr/share/ssl-cert/ssleay.cnf {{ owncloud_ssl_cert_file }}
+#         creates={{ owncloud_ssl_cert_file }}
 
-- name: ensure that owncloud group exists
-  group:
-    name: owncloud
-    state: present
+#- name: ensure that owncloud group exists
+#  group:
+#    name: owncloud
+#    state: present
 
-- name: ensure that owncloud user exits
-  user:
-    name: owncloud
-    group: owncloud
-    home: /srv/owncloud
-    createhome: no
-    shell: /bin/bash
-    state: present
+#- name: ensure that owncloud user exits
+#  user:
+#    name: owncloud
+#    group: owncloud
+#    home: /srv/owncloud
+#    createhome: no
+#    shell: /bin/bash
+#    state: present
 
-- name: ensure owncloud database is present
-  mysql_db:
-    name: owncloud
+#- name: ensure owncloud database is present
+#  mysql_db:
+#    name: owncloud
 
-- name: ensure owncloud database user is present
-  mysql_user:
-    name: owncloud
-    host: "{{ item }}"
-    password: "{{ owncloud_owncloud_mysql_password }}"
-    priv: owncloud.*:ALL
-  with_items:
-    - "%"
-    - localhost
+#- name: ensure owncloud database user is present
+#  mysql_user:
+#    name: owncloud
+#    host: "{{ item }}"
+#    password: "{{ owncloud_owncloud_mysql_password }}"
+#    priv: owncloud.*:ALL
+#  with_items:
+#    - "%"
+#    - localhost
 
 - name: ensure /var/cache/ansible directory exists
   file:
@@ -66,80 +61,82 @@
     mode: 0755
     state: directory
 
-- name: download the owncloud install package
-  get_url:
-    url: "{{ owncloud_download_url }}"
-    dest: /var/cache/ansible/owncloud.tar.bz2
+- name: checkout pwm from svn repository
+  subversion:
+    repo: http://pwm.googlecode.com/svn/tags/v1.7.1/pwm
+    dest: /var/cache/ansible/pwm
 
-- name: unarchive owncloud to /srv/owncloud
-  command: tar xvjf /var/cache/ansible/owncloud.tar.bz2
-           chdir=/srv
-           creates=/srv/owncloud
-  notify:
-    - update /srv/owncloud/config/autoconfig.php from template
-    - update /srv/owncloud/config/config.php from template
-    - initialize database
+- name: build pwm.war
+  command: ant makeWAR 
+           chdir=/var/cache/ansible/pwm/servlet 
+           creates=/var/cache/ansible/pwm/servlet/build/pwm.war
 
-- name: ensure /srv/owncloud is owned by owncloud user
+- name: link /var/cache/ansible/pwm/servlet/build/pwm.war to ..
   file:
-    path: /srv/owncloud
-    owner: owncloud
-    group: owncloud
-    recurse: yes
-
-- name: copy .my.cnf file with owncloud password credentials
-  template:
-    src: srv/owncloud/.my.cnf
-    dest: /srv/owncloud/.my.cnf
-    owner: owncloud
-    group: owncloud
-    mode: 0600
-
-- name: update /etc/php5/fpm/pool.d/owncloud.conf from template
-  template:
-    src: etc/php5/fpm/pool.d/owncloud.conf
-    dest: /etc/php5/fpm/pool.d/owncloud.conf 
-    owner: root
-    group: root
-    mode: 0644
-  notify:
-    - restart php5-fpm
-
-- name: update /etc/nginx/sites-available/owncloud from template
-  template:
-    src: etc/nginx/sites-available/owncloud
-    dest: /etc/nginx/sites-available/owncloud
-    owner: root
-    group: root
-    mode: 0644
-  notify:
-    - restart nginx
-
-- name: ensure /etc/nginx/sites-enabled/owncloud exists and links to ../sites-available/owncloud
-  file:
-    path: /etc/nginx/sites-enabled/owncloud
-    src: ../sites-available/owncloud
-    force: yes
+    src: /var/cache/ansible/pwm/servlet/build/pwm.war 
+    dest: /var/lib/tomcat6/webapps/pwm.war
     state: link
-  notify:
-    - restart nginx
+
+#- name: ensure /srv/owncloud is owned by owncloud user
+#  file:
+#    path: /srv/owncloud
+#    owner: owncloud
+#    group: owncloud
+#    recurse: yes
+
+#- name: copy .my.cnf file with owncloud password credentials
+#  template:
+#    src: srv/owncloud/.my.cnf
+#    dest: /srv/owncloud/.my.cnf
+#    owner: owncloud
+#    group: owncloud
+#    mode: 0600
+
+#- name: update /etc/php5/fpm/pool.d/owncloud.conf from template
+#  template:
+#    src: etc/php5/fpm/pool.d/owncloud.conf
+#    dest: /etc/php5/fpm/pool.d/owncloud.conf 
+#    owner: root
+#    group: root
+#    mode: 0644
+#  notify:
+#    - restart php5-fpm
+
+#- name: update /etc/nginx/sites-available/pwm from template
+#  template:
+#    src: etc/nginx/sites-available/pwm
+#    dest: /etc/nginx/sites-available/pwm
+#    owner: root
+#    group: root
+#    mode: 0644
+#  notify:
+#    - restart nginx
+
+#- name: ensure /etc/nginx/sites-enabled/pwm exists and links to ../sites-available/pwm
+#  file:
+#    path: /etc/nginx/sites-enabled/pwm
+#    src: ../sites-available/pwm
+#    force: yes
+#    state: link
+#  notify:
+#    - restart nginx
 
 - name: ensure that there is not a hostname collision with the nginx default host
   lineinfile:
     dest: /etc/nginx/sites-available/default
-    regexp: '^(\s+)(server_name {{ owncloud_hostname }};.*)$'
+    regexp: '^(\s+)(server_name {{ pwm_hostname }};.*)$'
     backrefs: yes
     line: '\1#\2'
     state: present
   notify:
     - restart nginx
 
-- name: ensure owncloud services are started and enabled
-  service:
-    name: "{{ item }}"
-    state: started
-    enabled: yes
-  with_items:
-    - nginx
-    - php5-fpm
+#- name: ensure owncloud services are started and enabled
+#  service:
+#    name: "{{ item }}"
+#    state: started
+#    enabled: yes
+#  with_items:
+#    - tomcat6
+#    - nginx
 

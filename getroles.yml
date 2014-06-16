@@ -12,5 +12,6 @@
         dest: roles/marklee77.{{ item }}
         update: yes
       with_items:
+        - modules-extra
         - slapd-auth
         - tomcat6

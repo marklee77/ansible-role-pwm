@@ -8,8 +8,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "trusty64"
   config.vm.box_url = "https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box"
 
-  config.vm.network "forwarded_port", guest: 8080, host: 8080, 
-    auto_correct: false
+  config.vm.network "forwarded_port", guest: 8080, host: 8080
 
   config.vm.provider "virtualbox" do |v|
     v.memory = 1280
@@ -22,8 +21,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "site.yml"
     ansible.extra_vars = {
-      owncloud_http_port: 8080,
-      owncloud_require_ssl: false,
+      pwm_http_port: 8080,
+      pwm_require_ssl: false,
+      tomcat6_catalina_port: 8080,
+      ldap_require_ssl: false,
     }
   end
 
